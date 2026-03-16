@@ -1,0 +1,243 @@
+"""
+文档导入路由
+支持：
+- 文件夹批量导入
+- PDF/DOCX/TXT 多格式解析
+- 文本预处理
+- 段落级分割
+"""
+
+from flask import Blueprint, request, jsonify
+from models.document import get_session, Document, create_document, delete_paragraphs_by_source
+from services.search import search_service
+from utils.file_reader import read_files_from_folder, read_file, get_supported_formats
+from utils.text_preprocessor import preprocess_text, batch_preprocess_texts
+from utils.text_splitter import split_text_with_metadata
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+import_bp = Blueprint('import', __name__)
+
+
+@import_bp.route('/documents/import', methods=['POST'])
+def import_documents():
+    """
+    从文件夹批量导入文档
+
+    请求体:
+        {
+            "folder_path": "/path/to/folder",
+            "split_paragraphs": true,  // 是否分割段落
+            "preprocess": true          // 是否预处理文本
+        }
+
+    返回:
+        {
+            "message": "...",
+            "count": 10,
+            "paragraphs": 50
+        }
+    """
+    # 参数验证
+    if not request.is_json:
+        return jsonify({'error': 'Content-Type must be application/json'}), 400
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body is empty'}), 400
+
+    folder_path = data.get('folder_path', '').strip()
+    if not folder_path:
+        return jsonify({'error': 'Folder path is required'}), 400
+
+    split_paragraphs = data.get('split_paragraphs', True)
+    preprocess = data.get('preprocess', True)
+
+    # 读取文件
+    try:
+        documents = read_files_from_folder(folder_path)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error reading folder: {e}")
+        return jsonify({'error': f'Failed to read folder: {str(e)}'}), 500
+
+    if not documents:
+        return jsonify({'error': 'No valid documents found'}), 400
+
+    # 导入文档
+    imported_count = 0
+    paragraph_count = 0
+
+    for doc_data in documents:
+        try:
+            # 文本预处理
+            if preprocess:
+                text = preprocess_text(doc_data['text'])
+            else:
+                text = doc_data['text']
+
+            if not text.strip():
+                continue
+
+            # 获取文件类型
+            file_type = None
+            if doc_data['source']:
+                import os
+                ext = os.path.splitext(doc_data['source'])[1].lower()
+                if ext:
+                    file_type = ext[1:]  # 去掉点号
+
+            if split_paragraphs:
+                # 分割为段落
+                paragraphs = split_text_with_metadata(text, doc_data['source'])
+
+                for para in paragraphs:
+                    # 创建段落文档
+                    create_document(
+                        title=doc_data['title'],
+                        text=text,  # 完整文本
+                        source_file=doc_data['source'],
+                        file_type=file_type,
+                        paragraph_index=para['index'],
+                        chunk_text=para['text']
+                    )
+                    paragraph_count += 1
+
+                # 为整个文档创建一个向量
+                search_service.add_document(
+                    doc_id=None,  # 需要从数据库获取ID
+                    text=text,
+                    batch_mode=False
+                )
+
+            else:
+                # 不分割，整个文档作为一条记录
+                doc = create_document(
+                    title=doc_data['title'],
+                    text=text,
+                    source_file=doc_data['source'],
+                    file_type=file_type
+                )
+
+                # 添加到搜索索引
+                search_service.add_document(doc.id, text)
+
+            imported_count += 1
+            logger.info(f"Imported: {doc_data['title']}")
+
+        except Exception as e:
+            logger.error(f"Error importing {doc_data.get('title', 'unknown')}: {e}")
+            continue
+
+    return jsonify({
+        'message': f'Successfully imported {imported_count} documents',
+        'count': imported_count,
+        'paragraphs': paragraph_count,
+        'formats': get_supported_formats()
+    }), 201
+
+
+@import_bp.route('/documents/import/file', methods=['POST'])
+def import_single_file():
+    """
+    导入单个文件
+
+    请求体:
+        {
+            "file_path": "/path/to/file.pdf"
+        }
+
+    返回:
+        {
+            "message": "...",
+            "document": {...}
+        }
+    """
+    if not request.is_json:
+        return jsonify({'error': 'Content-Type must be application/json'}), 400
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body is empty'}), 400
+
+    file_path = data.get('file_path', '').strip()
+    if not file_path:
+        return jsonify({'error': 'File path is required'}), 400
+
+    split_paragraphs = data.get('split_paragraphs', True)
+    preprocess = data.get('preprocess', True)
+
+    try:
+        # 读取文件
+        doc_data = read_file(file_path)
+
+        # 文本预处理
+        if preprocess:
+            text = preprocess_text(doc_data['text'])
+        else:
+            text = doc_data['text']
+
+        # 获取文件类型
+        import os
+        ext = os.path.splitext(file_path)[1].lower()
+        file_type = ext[1:] if ext else None
+
+        # 检查是否已存在该文件的段落
+        existing_count = 0
+        if doc_data['source']:
+            existing_count = delete_paragraphs_by_source(doc_data['source'])
+
+        if existing_count > 0:
+            logger.info(f"Replacing {existing_count} existing paragraphs")
+
+        paragraph_count = 0
+
+        if split_paragraphs:
+            # 分割为段落
+            paragraphs = split_text_with_metadata(text, doc_data['source'])
+
+            for para in paragraphs:
+                doc = create_document(
+                    title=doc_data['title'],
+                    text=text,
+                    source_file=doc_data['source'],
+                    file_type=file_type,
+                    paragraph_index=para['index'],
+                    chunk_text=para['text']
+                )
+                paragraph_count += 1
+        else:
+            # 不分割
+            doc = create_document(
+                title=doc_data['title'],
+                text=text,
+                source_file=doc_data['source'],
+                file_type=file_type
+            )
+
+        # 添加到搜索索引
+        search_service.add_document(doc.id if 'doc' in locals() else 0, text)
+
+        return jsonify({
+            'message': 'File imported successfully',
+            'document': doc.to_dict() if 'doc' in locals() else None,
+            'paragraphs': paragraph_count
+        }), 201
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error importing file: {e}")
+        return jsonify({'error': f'Failed to import file: {str(e)}'}), 500
+
+
+@import_bp.route('/documents/formats', methods=['GET'])
+def get_formats():
+    """获取支持的文件格式"""
+    return jsonify({
+        'formats': get_supported_formats()
+    })

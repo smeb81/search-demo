@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <linearGradient id="gridGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0066ff"/>
+      <stop offset="100%" stop-color="#00ffff"/>
+    </linearGradient>
+    
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="centerGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect width="500" height="500" fill="#0a0a1a"/>
+  
+  <g filter="url(#glow)" stroke="url(#gridGradient)" stroke-width="0.5" opacity="0.5">
+    <line x1="50" y1="0" x2="50" y2="500"/>
+    <line x1="100" y1="0" x2="100" y2="500"/>
+    <line x1="150" y1="0" x2="150" y2="500"/>
+    <line x1="200" y1="0" x2="200" y2="500"/>
+    <line x1="250" y1="0" x2="250" y2="500"/>
+    <line x1="300" y1="0" x2="300" y2="500"/>
+    <line x1="350" y1="0" x2="350" y2="500"/>
+    <line x1="400" y1="0" x2="400" y2="500"/>
+    <line x1="450" y1="0" x2="450" y2="500"/>
+    
+    <line x1="0" y1="50" x2="500" y2="50"/>
+    <line x1="0" y1="100" x2="500" y2="100"/>
+    <line x1="0" y1="150" x2="500" y2="150"/>
+    <line x1="0" y1="200" x2="500" y2="200"/>
+    <line x1="0" y1="250" x2="500" y2="250"/>
+    <line x1="0" y1="300" x2="500" y2="300"/>
+    <line x1="0" y1="350" x2="500" y2="350"/>
+    <line x1="0" y1="400" x2="500" y2="400"/>
+    <line x1="0" y1="450" x2="500" y2="450"/>
+  </g>
+  
+  <g fill="#00ffff" filter="url(#glow)" opacity="0.7">
+    <circle cx="100" cy="100" r="2.5"/>
+    <circle cx="200" cy="100" r="2.5"/>
+    <circle cx="300" cy="100" r="2.5"/>
+    <circle cx="400" cy="100" r="2.5"/>
+    <circle cx="100" cy="200" r="2.5"/>
+    <circle cx="300" cy="200" r="2.5"/>
+    <circle cx="400" cy="200" r="2.5"/>
+    <circle cx="100" cy="300" r="2.5"/>
+    <circle cx="200" cy="300" r="2.5"/>
+    <circle cx="300" cy="300" r="2.5"/>
+    <circle cx="400" cy="300" r="2.5"/>
+    <circle cx="100" cy="400" r="2.5"/>
+    <circle cx="200" cy="400" r="2.5"/>
+    <circle cx="300" cy="400" r="2.5"/>
+    <circle cx="400" cy="400" r="2.5"/>
+  </g>
+  
+  <g filter="url(#centerGlow)">
+    <polygon points="250,150 350,250 250,350 150,250" fill="none" stroke="url(#gridGradient)" stroke-width="2"/>
+    <polygon points="250,190 310,250 250,310 190,250" fill="none" stroke="url(#gridGradient)" stroke-width="1.5"/>
+    <polygon points="250,220 280,250 250,280 220,250" fill="none" stroke="#00ffff" stroke-width="1"/>
+    <circle cx="250" cy="250" r="20" fill="none" stroke="url(#gridGradient)" stroke-width="1.5"/>
+    <circle cx="250" cy="250" r="10" fill="#00ffff"/>
+  </g>
+  
+  <g filter="url(#glow)" stroke="url(#gridGradient)" stroke-width="1.5" fill="none">
+    <path d="M 30 50 L 30 30 L 50 30"/>
+    <path d="M 470 30 L 450 30 L 450 50"/>
+    <path d="M 30 470 L 30 450 L 50 450"/>
+    <path d="M 470 470 L 450 470 L 450 450"/>
+  </g>
+  
+  <g filter="url(#glow)">
+    <circle cx="30" cy="30" r="4" fill="#00ffff"/>
+    <circle cx="470" cy="30" r="4" fill="#00ffff"/>
+    <circle cx="30" cy="470" r="4" fill="#00ffff"/>
+    <circle cx="470" cy="470" r="4" fill="#00ffff"/>
+  </g>
+  
+  <g filter="url(#glow)" fill="#00ffff" opacity="0.8">
+    <rect x="245" y="145" width="10" height="2" rx="1"/>
+    <rect x="245" y="353" width="10" height="2" rx="1"/>
+    <rect x="145" y="245" width="2" height="10" rx="1"/>
+    <rect x="353" y="245" width="2" height="10" rx="1"/>
+  </g>
+</svg>

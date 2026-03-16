@@ -1,0 +1,27 @@
+# Flask Web框架
+Flask>=3.0.0
+flask-cors>=4.0.0
+
+# 数据库
+SQLAlchemy>=2.0.0
+
+# 向量数据库
+faiss-cpu>=1.7.4
+# 如需GPU支持使用: faiss-gpu
+
+# 文本嵌入模型
+sentence-transformers>=2.2.0
+torch>=2.0.0
+transformers>=4.30.0
+
+# PDF解析
+pdfplumber>=0.10.0
+
+# DOCX解析
+python-docx>=0.8.11
+
+# 繁简转换
+opencc-python-reimplemented>=0.1.7
+
+# 其他工具
+numpy>=1.24.0
