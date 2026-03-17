@@ -13,6 +13,9 @@ from routes.import_documents import import_bp
 app = Flask(__name__)
 CORS(app)  # 允许跨域请求
 
+# 文件上传配置
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大16MB
+
 # 注册路由
 app.register_blueprint(document_bp, url_prefix='/api')
 app.register_blueprint(search_bp, url_prefix='/api')

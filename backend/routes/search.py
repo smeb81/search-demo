@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from services.search import search_service
 from models.document import get_session, Document
+from config import SIMILARITY_THRESHOLD
 import logging
 
 # 配置日志
@@ -53,9 +54,14 @@ def search():
     if not isinstance(top_k, int) or top_k < 1 or top_k > 100:
         return jsonify({'error': 'top_k must be an integer between 1 and 100'}), 400
 
+    # 获取相似度阈值（可选参数）
+    threshold = data.get('threshold', SIMILARITY_THRESHOLD)
+    if not isinstance(threshold, (int, float)) or threshold < 0 or threshold > 1:
+        return jsonify({'error': 'threshold must be a number between 0 and 1'}), 400
+
     try:
-        # 执行搜索
-        results = search_service.search(query, top_k)
+        # 执行搜索（传入阈值参数）
+        results = search_service.search(query, top_k, threshold)
 
         if not results:
             return jsonify({

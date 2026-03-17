@@ -5,12 +5,12 @@
         v-model="searchQuery"
         placeholder="输入自然语言查询，例如：'关于机器学习的文档'"
         size="large"
+        class="search-input"
         @keyup.enter="handleSearch"
       >
-        <template #append>
-          <el-button type="primary" @click="handleSearch" :loading="loading">
+        <template #suffix>
+          <el-button type="primary" class="search-btn" @click="handleSearch" :loading="loading">
             <el-icon><Search /></el-icon>
-            搜索
           </el-button>
         </template>
       </el-input>
@@ -22,7 +22,21 @@
           <el-icon><Plus /></el-icon>
           添加文档
         </el-button>
-        <el-button type="warning" @click="showImportDialog = true">
+        <el-upload
+          class="upload-btn"
+          :action="uploadUrl"
+          :before-upload="handleBeforeUpload"
+          :on-success="handleUploadSuccess"
+          :on-error="handleUploadError"
+          :show-file-list="false"
+          accept=".txt,.md,.pdf,.docx"
+        >
+          <el-button type="warning">
+            <el-icon><Upload /></el-icon>
+            上传文档
+          </el-button>
+        </el-upload>
+        <el-button type="info" @click="showImportDialog = true">
           <el-icon><FolderOpened /></el-icon>
           批量导入
         </el-button>
@@ -73,9 +87,10 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Search, Plus, FolderOpened } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { Search, Plus, FolderOpened, Upload } from '@element-plus/icons-vue'
 
-const emit = defineEmits(['search', 'add-document', 'import-folder'])
+const emit = defineEmits(['search', 'add-document', 'import-folder', 'upload-success'])
 
 const searchQuery = ref('')
 const loading = ref(false)
@@ -83,6 +98,7 @@ const showAddDialog = ref(false)
 const showImportDialog = ref(false)
 const newDoc = ref({ title: '', text: '' })
 const folderPath = ref('')
+const uploadUrl = '/api/documents/upload'
 
 const handleSearch = () => {
   emit('search', searchQuery.value)
@@ -105,6 +121,30 @@ const submitImport = () => {
   folderPath.value = ''
   showImportDialog.value = false
 }
+
+const handleBeforeUpload = (file) => {
+  const allowedTypes = ['.txt', '.md', '.pdf', '.docx']
+  const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+  if (!allowedTypes.includes(ext)) {
+    ElMessage.error('不支持的文件格式，仅支持 .txt, .md, .pdf, .docx')
+    return false
+  }
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过 10MB')
+    return false
+  }
+  return true
+}
+
+const handleUploadSuccess = (response) => {
+  ElMessage.success('文件上传成功')
+  emit('upload-success')
+}
+
+const handleUploadError = (error) => {
+  ElMessage.error('文件上传失败: ' + (error.response?.data?.error || '未知错误'))
+}
 </script>
 
 <style scoped>
@@ -118,5 +158,23 @@ const submitImport = () => {
 
 .action-card {
   margin-bottom: 15px;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  padding-right: 4px;
+}
+
+.search-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+}
+
+.search-btn:hover {
+  background: transparent;
+}
+
+.upload-btn {
+  display: inline-block;
 }
 </style>

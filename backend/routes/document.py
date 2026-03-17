@@ -25,7 +25,7 @@ document_bp = Blueprint('document', __name__)
 @document_bp.route('/documents', methods=['GET'])
 def get_all_documents():
     """
-    获取所有文档
+    获取所有文档（去重，每个源文件只返回一条）
 
     Query参数:
         - limit: 限制数量
@@ -40,7 +40,8 @@ def get_all_documents():
 
         session = get_session()
         try:
-            query = session.query(Document)
+            # 只获取 paragraph_index=0 的记录，即每个源文件的根文档
+            query = session.query(Document).filter(Document.paragraph_index == 0)
 
             if source:
                 query = query.filter(Document.source_file == source)

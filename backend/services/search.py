@@ -14,7 +14,7 @@ import os
 import logging
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import FAISS_INDEX_PATH, DOC_IDS_PATH, DEFAULT_TOP_K
+from config import FAISS_INDEX_PATH, DOC_IDS_PATH, DEFAULT_TOP_K, SIMILARITY_THRESHOLD
 from services.embedding import get_embedding_service
 
 # 配置日志
@@ -199,16 +199,18 @@ class SearchService:
         finally:
             session.close()
 
-    def search(self, query: str, top_k: int = DEFAULT_TOP_K) -> list:
+    def search(self, query: str, top_k: int = DEFAULT_TOP_K, threshold: float = SIMILARITY_THRESHOLD) -> list:
         """
         语义搜索
 
         Args:
             query: 查询文本
             top_k: 返回结果数量
+            threshold: 相似度阈值，低于此值的结果将被过滤
 
         Returns:
             搜索结果列表，每项包含 doc_id, paragraph_index, similarity
+            注意：同一文档只返回相似度最高的段落
         """
         if self.index.ntotal == 0:
             logger.warning("Index is empty")
@@ -219,14 +221,14 @@ class SearchService:
             query_embedding = self._embedding_service.encode(query)
             query_embedding = query_embedding / np.linalg.norm(query_embedding)
 
-            # 搜索
-            k = min(top_k, self.index.ntotal)
+            # 搜索（多搜索一些结果，以便过滤后仍有足够结果）
+            k = min(top_k * 5, self.index.ntotal)  # 多搜索一些以备去重和过滤
             distances, indices = self.index.search(query_embedding, k)
 
-            # 构建结果
-            results = []
+            # 先收集所有满足阈值条件的结果
+            all_results = []
             for dist, idx in zip(distances[0], indices[0]):
-                if idx >= 0 and idx < len(self.doc_ids):
+                if idx >= 0 and idx < len(self.doc_ids) and dist >= threshold:
                     doc_id_or_tuple = self.doc_ids[idx]
 
                     # 处理单个ID或(文档ID, 段落索引)元组
@@ -236,13 +238,23 @@ class SearchService:
                         doc_id = doc_id_or_tuple
                         para_idx = None
 
-                    results.append({
+                    all_results.append({
                         'doc_id': doc_id,
                         'paragraph_index': para_idx,
                         'similarity': float(dist)
                     })
 
-            logger.info(f"Search completed, found {len(results)} results")
+            # 去重：对同一文档只保留相似度最高的段落
+            doc_best = {}  # doc_id -> best result
+            for result in all_results:
+                doc_id = result['doc_id']
+                if doc_id not in doc_best or result['similarity'] > doc_best[doc_id]['similarity']:
+                    doc_best[doc_id] = result
+
+            # 按相似度降序排序，取 top_k 个
+            results = sorted(doc_best.values(), key=lambda x: x['similarity'], reverse=True)[:top_k]
+
+            logger.info(f"Search completed with threshold {threshold}, found {len(results)} unique results from {len(all_results)} total")
             return results
 
         except Exception as e:
@@ -258,14 +270,14 @@ class SearchService:
         }
 
     def rebuild_index(self):
-        """重建整个索引"""
-        logger.info("Rebuilding index...")
+        """重建整个索引（索引所有段落）"""
+        logger.info("Rebuilding index with all paragraphs...")
 
         from models.document import get_session, Document
 
         session = get_session()
         try:
-            # 获取所有文档
+            # 获取所有文档段落
             all_docs = session.query(Document).all()
 
             # 重建索引
@@ -275,9 +287,16 @@ class SearchService:
 
             for doc in all_docs:
                 text = doc.chunk_text or doc.text
-                self._add_single_embedding(doc.id, text)
+                if text:
+                    embedding = self._embedding_service.encode(text)
+                    embedding = embedding / np.linalg.norm(embedding)
+                    self.index.add(embedding)
+                    # 存储 (doc_id, paragraph_index) 元组
+                    self.doc_ids.append((doc.id, doc.paragraph_index))
+                    logger.info(f"Added doc {doc.id} paragraph {doc.paragraph_index}: {doc.title[:30]}")
 
-            logger.info(f"Index rebuilt with {len(all_docs)} documents")
+            self.save_index()
+            logger.info(f"Index rebuilt with {len(all_docs)} documents, total vectors: {self.index.ntotal}")
         finally:
             session.close()
 

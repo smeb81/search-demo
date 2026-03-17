@@ -248,3 +248,39 @@ def read_files_from_folder(folder_path: str) -> List[Dict[str, any]]:
 def get_supported_formats() -> List[str]:
     """获取支持的文件格式列表"""
     return SUPPORTED_EXTENSIONS.copy()
+
+
+def read_file_content(file_path: str, original_filename: str) -> Dict[str, any]:
+    """
+    读取文件内容（用于上传的文件）
+
+    Args:
+        file_path: 临时文件路径
+        original_filename: 原始文件名
+
+    Returns:
+        包含 title, text, source 的字典
+    """
+    ext = os.path.splitext(original_filename)[1].lower()
+
+    if ext not in SUPPORTED_EXTENSIONS:
+        raise ValueError(f"Unsupported file format: {ext}")
+
+    # 获取文件名作为标题
+    title = os.path.splitext(os.path.basename(original_filename))[0]
+
+    # 根据格式读取内容
+    if ext == '.pdf':
+        text = read_pdf(file_path)
+    elif ext == '.docx':
+        text = read_docx(file_path)
+    elif ext in ['.txt', '.md']:
+        text = read_text_file(file_path)
+    else:
+        raise ValueError(f"Unsupported file format: {ext}")
+
+    return {
+        'title': title,
+        'text': text,
+        'source': original_filename
+    }

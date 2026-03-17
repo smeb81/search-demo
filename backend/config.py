@@ -29,3 +29,4 @@ FLASK_PORT = 5000
 
 # 搜索配置
 DEFAULT_TOP_K = 5
+SIMILARITY_THRESHOLD = 0.5  # 相似度阈值，低于此值的结果将被过滤

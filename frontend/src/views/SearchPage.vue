@@ -24,7 +24,7 @@
         </div>
 
         <div class="search-actions">
-          <el-button type="primary" size="large" @click="handleSearch" :loading="loading" class="search-btn">
+          <el-button type="primary" size="large" @click="handleSearch" class="search-btn">
             搜索
           </el-button>
         </div>
@@ -44,41 +44,10 @@
           <el-icon><Document /></el-icon>
           文档库
         </el-button>
-      </div>
-    </div>
-
-    <!-- 搜索结果 -->
-    <div class="results-container" v-if="searchQuery || results.length > 0">
-      <div v-if="loading" class="loading">
-        <div class="skeleton-item" v-for="i in 3" :key="i">
-          <el-skeleton :rows="3" animated />
-        </div>
-      </div>
-
-      <el-empty v-else-if="results.length === 0 && searchQuery" description="未找到相关文档" />
-
-      <div v-else class="result-list">
-        <div class="results-count" v-if="results.length > 0">
-          找到 <strong>{{ results.length }}</strong> 条相关结果
-        </div>
-        <div
-          v-for="result in results"
-          :key="result.id"
-          class="result-item"
-        >
-          <div class="result-header">
-            <div class="result-title-wrap">
-              <span class="result-id">#{{ result.id }}</span>
-              <span class="result-title">{{ result.title || '无标题' }}</span>
-            </div>
-            <el-tag type="success" effect="dark" class="similarity-tag">
-              {{ (result.similarity * 100).toFixed(1) }}%
-            </el-tag>
-          </div>
-          <div class="result-text">
-            {{ result.text }}
-          </div>
-        </div>
+        <el-button class="action-btn warning" @click="handleRebuildIndex" :loading="rebuilding">
+          <el-icon><Refresh /></el-icon>
+          重建索引
+        </el-button>
       </div>
     </div>
 
@@ -126,32 +95,44 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Plus, FolderOpened, Close, Document } from '@element-plus/icons-vue'
-import { searchDocuments, addDocument, importFolder } from '../api'
+import { Search, Plus, FolderOpened, Close, Document, Refresh } from '@element-plus/icons-vue'
+import { addDocument, importFolder, rebuildIndex } from '../api'
 
+const router = useRouter()
 const searchQuery = ref('')
-const results = ref([])
 const loading = ref(false)
+const rebuilding = ref(false)
 const showAddDialog = ref(false)
 const showImportDialog = ref(false)
 const newDoc = ref({ title: '', text: '' })
 const folderPath = ref('')
 
-const handleSearch = async () => {
-  if (!searchQuery.value.trim()) {
-    results.value = []
+// 重建索引
+const handleRebuildIndex = async () => {
+  rebuilding.value = true
+  try {
+    await rebuildIndex()
+    ElMessage.success('索引重建成功，现在可以搜索文档的所有段落')
+    // 重新执行搜索
+    if (searchQuery.value) {
+      handleSearch()
+    }
+  } catch (error) {
+    ElMessage.error('索引重建失败')
+  } finally {
+    rebuilding.value = false
+  }
+}
+
+const handleSearch = () => {
+  const query = searchQuery.value.trim()
+  if (!query) {
     return
   }
-  loading.value = true
-  try {
-    const res = await searchDocuments(searchQuery.value)
-    results.value = res.data
-  } catch (error) {
-    ElMessage.error('搜索失败')
-  } finally {
-    loading.value = false
-  }
+  // 跳转到搜索结果页面
+  router.push({ path: '/search', query: { q: query } })
 }
 
 const submitDocument = () => {
@@ -389,122 +370,15 @@ const submitImport = () => {
   box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5) !important;
 }
 
-.results-container {
-  max-width: 850px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  background: var(--dark-bg);
-  min-height: 400px;
+.action-btn.warning {
+  background: rgba(245, 158, 11, 0.2) !important;
+  border: 1px solid rgba(245, 158, 11, 0.5) !important;
+  color: #fbbf24 !important;
 }
 
-.results-count {
-  color: var(--lavender);
-  font-size: 14px;
-  margin-bottom: 20px;
-  padding-left: 4px;
-}
-
-.results-count strong {
-  color: var(--glow-purple);
-}
-
-.result-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.result-item {
-  background: linear-gradient(135deg, rgba(43, 30, 62, 0.8), rgba(26, 20, 41, 0.9));
-  border: 1px solid rgba(164, 144, 194, 0.15);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  transition: all 0.25s ease;
-  backdrop-filter: blur(10px);
-}
-
-.result-item:hover {
-  border-color: var(--glow-purple);
-  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.15);
-  transform: translateY(-2px);
-}
-
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.result-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.result-id {
-  background: linear-gradient(135deg, var(--glow-purple), var(--cosmic-blue));
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.result-title {
-  font-weight: 600;
-  font-size: 17px;
-  color: var(--silver);
-}
-
-.similarity-tag {
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 16px;
-}
-
-.result-text {
-  color: rgba(230, 230, 250, 0.8);
-  line-height: 1.8;
-  font-size: 14px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 180px;
-  overflow-y: auto;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-  border-left: 3px solid var(--glow-purple);
-}
-
-.result-text::-webkit-scrollbar {
-  width: 6px;
-}
-
-.result-text::-webkit-scrollbar-track {
-  background: rgba(164, 144, 194, 0.1);
-  border-radius: 3px;
-}
-
-.result-text::-webkit-scrollbar-thumb {
-  background: var(--cosmic-blue);
-  border-radius: 3px;
-}
-
-.loading {
-  background: rgba(43, 30, 62, 0.5);
-  border-radius: 16px;
-  padding: 24px;
-}
-
-.skeleton-item {
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(164, 144, 194, 0.1);
-}
-
-.skeleton-item:last-child {
-  border-bottom: none;
+.action-btn.warning:hover {
+  background: rgba(245, 158, 11, 0.3) !important;
+  border-color: #f59e0b !important;
 }
 
 :deep(.custom-dialog) {

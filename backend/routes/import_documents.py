@@ -5,15 +5,18 @@
 - PDF/DOCX/TXT 多格式解析
 - 文本预处理
 - 段落级分割
+- 文件上传
 """
 
 from flask import Blueprint, request, jsonify
 from models.document import get_session, Document, create_document, delete_paragraphs_by_source
 from services.search import search_service
-from utils.file_reader import read_files_from_folder, read_file, get_supported_formats
+from utils.file_reader import read_files_from_folder, read_file, get_supported_formats, read_file_content
 from utils.text_preprocessor import preprocess_text, batch_preprocess_texts
 from utils.text_splitter import split_text_with_metadata
 import logging
+import os
+import tempfile
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -95,9 +98,11 @@ def import_documents():
                 # 分割为段落
                 paragraphs = split_text_with_metadata(text, doc_data['source'])
 
+                # 先创建所有段落文档，获取ID
+                created_docs = []
                 for para in paragraphs:
                     # 创建段落文档
-                    create_document(
+                    doc = create_document(
                         title=doc_data['title'],
                         text=text,  # 完整文本
                         source_file=doc_data['source'],
@@ -105,14 +110,13 @@ def import_documents():
                         paragraph_index=para['index'],
                         chunk_text=para['text']
                     )
+                    created_docs.append(doc)
                     paragraph_count += 1
 
-                # 为整个文档创建一个向量
-                search_service.add_document(
-                    doc_id=None,  # 需要从数据库获取ID
-                    text=text,
-                    batch_mode=False
-                )
+                # 为每个段落添加向量索引
+                for doc in created_docs:
+                    if doc.chunk_text:
+                        search_service.add_document(doc.id, doc.chunk_text)
 
             else:
                 # 不分割，整个文档作为一条记录
@@ -241,3 +245,123 @@ def get_formats():
     return jsonify({
         'formats': get_supported_formats()
     })
+
+
+@import_bp.route('/documents/upload', methods=['POST'])
+def upload_file():
+    """
+    上传单个文件
+
+    请求: multipart/form-data
+        - file: 文件
+
+    返回:
+        {
+            "message": "...",
+            "document": {...}
+        }
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename'}), 400
+
+    # 检查文件类型
+    allowed_extensions = {'.txt', '.md', '.pdf', '.docx'}
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in allowed_extensions:
+        return jsonify({'error': f'Unsupported file type. Allowed: {allowed_extensions}'}), 400
+
+    split_paragraphs = request.form.get('split_paragraphs', 'true').lower() == 'true'
+    preprocess = request.form.get('preprocess', 'true').lower() == 'true'
+
+    # 保存上传的文件到临时目录
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+            file.save(tmp.name)
+            tmp_path = tmp.name
+
+        try:
+            # 读取文件内容
+            doc_data = read_file_content(tmp_path, file.filename)
+
+            # 文本预处理
+            if preprocess:
+                text = preprocess_text(doc_data['text'])
+            else:
+                text = doc_data['text']
+
+            if not text.strip():
+                return jsonify({'error': 'File content is empty'}), 400
+
+            # 获取文件类型
+            file_type = ext[1:] if ext else None
+
+            # 检查是否已存在该文件的段落
+            existing_count = 0
+            if doc_data['source']:
+                existing_count = delete_paragraphs_by_source(doc_data['source'])
+
+            if existing_count > 0:
+                logger.info(f"Replacing {existing_count} existing paragraphs")
+
+            paragraph_count = 0
+            doc = None
+
+            if split_paragraphs:
+                # 分割为段落
+                paragraphs = split_text_with_metadata(text, doc_data['source'])
+
+                # 先创建所有段落文档，获取ID
+                created_docs = []
+                for para in paragraphs:
+                    doc = create_document(
+                        title=doc_data['title'],
+                        text=text,
+                        source_file=doc_data['source'],
+                        file_type=file_type,
+                        paragraph_index=para['index'],
+                        chunk_text=para['text']
+                    )
+                    created_docs.append(doc)
+                    paragraph_count += 1
+
+                # 为每个段落添加向量索引
+                for created_doc in created_docs:
+                    if created_doc.chunk_text:
+                        search_service.add_document(created_doc.id, created_doc.chunk_text)
+
+                # 返回第一个文档
+                doc = created_docs[0] if created_docs else None
+            else:
+                # 不分割
+                doc = create_document(
+                    title=doc_data['title'],
+                    text=text,
+                    source_file=doc_data['source'],
+                    file_type=file_type
+                )
+
+                # 添加到搜索索引
+                if doc:
+                    search_service.add_document(doc.id, text)
+
+            return jsonify({
+                'message': 'File uploaded successfully',
+                'document': doc.to_dict() if doc else None,
+                'paragraphs': paragraph_count,
+                'existing_paragraphs_replaced': existing_count
+            }), 201
+
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        return jsonify({'error': f'Failed to upload file: {str(e)}'}), 500

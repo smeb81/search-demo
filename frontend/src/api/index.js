@@ -22,4 +22,6 @@ export const importFolder = (folderPath) => api.post('/documents/import', {
   folder_path: folderPath
 })
 
+export const rebuildIndex = () => api.post('/search/rebuild')
+
 export default api
