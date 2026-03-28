@@ -17,6 +17,20 @@
             <el-icon><Plus /></el-icon>
             添加文档
           </el-button>
+          <el-upload
+            class="upload-btn"
+            :action="uploadUrl"
+            :before-upload="handleBeforeUpload"
+            :on-success="handleUploadSuccess"
+            :on-error="handleUploadError"
+            :show-file-list="false"
+            accept=".txt,.md,.pdf,.docx"
+          >
+            <el-button class="action-btn">
+              <el-icon><Upload /></el-icon>
+              上传文档
+            </el-button>
+          </el-upload>
           <el-button class="action-btn" @click="showImportDialog = true">
             <el-icon><FolderOpened /></el-icon>
             批量导入
@@ -132,7 +146,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Plus, FolderOpened, Refresh, Delete, Clock, Document, Files } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, FolderOpened, Refresh, Delete, Clock, Document, Files, Upload } from '@element-plus/icons-vue'
 import { getDocuments, deleteDocument, addDocument, importFolder } from '../api'
 
 const documents = ref([])
@@ -142,6 +156,7 @@ const showAddDialog = ref(false)
 const showImportDialog = ref(false)
 const newDoc = ref({ title: '', text: '' })
 const folderPath = ref('')
+const uploadUrl = '/api/documents/upload'
 
 const totalDocs = computed(() => documents.value.length)
 
@@ -218,6 +233,30 @@ const submitImport = () => {
   }).catch((error) => {
     ElMessage.error('导入失败: ' + (error.response?.data?.error || '未知错误'))
   })
+}
+
+const handleBeforeUpload = (file) => {
+  const allowedTypes = ['.txt', '.md', '.pdf', '.docx']
+  const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+  if (!allowedTypes.includes(ext)) {
+    ElMessage.error('不支持的文件格式，仅支持 .txt, .md, .pdf, .docx')
+    return false
+  }
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过 10MB')
+    return false
+  }
+  return true
+}
+
+const handleUploadSuccess = (response) => {
+  ElMessage.success('文件上传成功')
+  loadDocuments()
+}
+
+const handleUploadError = (error) => {
+  ElMessage.error('文件上传失败: ' + (error.response?.data?.error || '未知错误'))
 }
 
 onMounted(() => {
@@ -317,6 +356,10 @@ onMounted(() => {
 .header-actions .action-btn:hover {
   background: rgba(164, 144, 194, 0.25) !important;
   border-color: var(--glow-purple) !important;
+}
+
+.upload-btn {
+  display: inline-block;
 }
 
 .documents-container {

@@ -1,14 +1,14 @@
 """
-文档管理路由
+文档管理路由 (MongoDB版本)
 支持：
 - 文档CRUD
 - 段落级操作
 """
 
 from flask import Blueprint, request, jsonify
-from models.document import (
-    get_session, Document, get_documents, get_document_by_id,
-    delete_document_by_id, create_document, get_paragraphs_by_source
+from models.document_mongo import (
+    create_document, get_documents, get_document_by_id,
+    delete_document_by_id, get_paragraphs_by_source, delete_paragraphs_by_source
 )
 from services.search import search_service
 from utils.text_preprocessor import preprocess_text
@@ -25,7 +25,7 @@ document_bp = Blueprint('document', __name__)
 @document_bp.route('/documents', methods=['GET'])
 def get_all_documents():
     """
-    获取所有文档
+    获取所有文档（去重，每个源文件只返回一条）
 
     Query参数:
         - limit: 限制数量
@@ -38,37 +38,34 @@ def get_all_documents():
         limit = request.args.get('limit', type=int)
         source = request.args.get('source', type=str)
 
-        session = get_session()
-        try:
-            query = session.query(Document)
+        # 获取所有文档
+        all_docs = get_documents(limit=limit)
 
-            if source:
-                query = query.filter(Document.source_file == source)
+        # 只获取 paragraph_index=0 的记录，即每个源文件的根文档
+        docs = [doc for doc in all_docs if doc.get('paragraph_index', 0) == 0]
 
-            query = query.order_by(Document.created_at.desc())
+        # 按源文件筛选
+        if source:
+            docs = [doc for doc in docs if doc.get('source_file') == source]
 
-            if limit:
-                query = query.limit(limit)
+        # 按创建时间降序
+        docs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
 
-            documents = query.all()
-
-            return jsonify([doc.to_dict() for doc in documents])
-        finally:
-            session.close()
+        return jsonify(docs)
 
     except Exception as e:
         logger.error(f"Error getting documents: {e}")
         return jsonify({'error': str(e)}), 500
 
 
-@document_bp.route('/documents/<int:doc_id>', methods=['GET'])
+@document_bp.route('/documents/<doc_id>', methods=['GET'])
 def get_document(doc_id):
     """获取单个文档"""
     try:
         doc = get_document_by_id(doc_id)
         if doc is None:
             return jsonify({'error': 'Document not found'}), 404
-        return jsonify(doc.to_dict())
+        return jsonify(doc)
     except Exception as e:
         logger.error(f"Error getting document {doc_id}: {e}")
         return jsonify({'error': str(e)}), 500
@@ -125,11 +122,11 @@ def add_document():
                     first_doc = doc
 
             # 添加到搜索索引（添加第一条）
-            search_service.add_document(first_doc.id, paragraphs[0]['text'])
+            search_service.add_document(first_doc['id'], paragraphs[0]['text'])
 
             return jsonify({
                 'message': f'Document added with {len(paragraphs)} paragraphs',
-                'document': first_doc.to_dict()
+                'document': first_doc
             }), 201
         else:
             # 不分割
@@ -141,16 +138,16 @@ def add_document():
             )
 
             # 添加到搜索索引
-            search_service.add_document(doc.id, text)
+            search_service.add_document(doc['id'], text)
 
-            return jsonify(doc.to_dict()), 201
+            return jsonify(doc), 201
 
     except Exception as e:
         logger.error(f"Error adding document: {e}")
         return jsonify({'error': str(e)}), 500
 
 
-@document_bp.route('/documents/<int:doc_id>', methods=['DELETE'])
+@document_bp.route('/documents/<doc_id>', methods=['DELETE'])
 def delete_document(doc_id):
     """删除文档"""
     try:
@@ -159,8 +156,8 @@ def delete_document(doc_id):
             return jsonify({'error': 'Document not found'}), 404
 
         # 删除源文件的所有段落
-        if doc.source_file:
-            delete_paragraphs_by_source(doc.source_file)
+        if doc.get('source_file'):
+            delete_paragraphs_by_source(doc['source_file'])
 
         # 从搜索索引中删除
         search_service.delete_document(doc_id)
@@ -176,7 +173,7 @@ def get_documents_by_source(source):
     """根据源文件获取所有段落"""
     try:
         paragraphs = get_paragraphs_by_source(source)
-        return jsonify([p.to_dict() for p in paragraphs])
+        return jsonify(paragraphs)
     except Exception as e:
         logger.error(f"Error getting paragraphs for {source}: {e}")
         return jsonify({'error': str(e)}), 500

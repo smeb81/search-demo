@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from services.search import search_service
-from models.document import get_session, Document
+from models.document_mongo import get_document_by_id
+from config import SIMILARITY_THRESHOLD
 import logging
 
 # 配置日志
@@ -24,7 +25,7 @@ def search():
     返回:
         [
             {
-                "id": 1,
+                "id": "ObjectId字符串",
                 "title": "文档标题",
                 "text": "段落文本",
                 "source": "源文件路径",
@@ -53,9 +54,14 @@ def search():
     if not isinstance(top_k, int) or top_k < 1 or top_k > 100:
         return jsonify({'error': 'top_k must be an integer between 1 and 100'}), 400
 
+    # 获取相似度阈值（可选参数）
+    threshold = data.get('threshold', SIMILARITY_THRESHOLD)
+    if not isinstance(threshold, (int, float)) or threshold < 0 or threshold > 1:
+        return jsonify({'error': 'threshold must be a number between 0 and 1'}), 400
+
     try:
-        # 执行搜索
-        results = search_service.search(query, top_k)
+        # 执行搜索（传入阈值参数）
+        results = search_service.search(query, top_k, threshold)
 
         if not results:
             return jsonify({
@@ -64,34 +70,29 @@ def search():
             })
 
         # 获取完整的文档信息
-        session = get_session()
-        try:
-            response = []
-            for result in results:
-                doc_id = result['doc_id']
-                doc = session.query(Document).filter(Document.id == doc_id).first()
+        response = []
+        for result in results:
+            doc_id = result['doc_id']
+            doc = get_document_by_id(doc_id)
 
-                if doc:
-                    response.append({
-                        'id': doc.id,
-                        'title': doc.title or 'Untitled',
-                        'text': doc.chunk_text or doc.text,
-                        'source': doc.source_file or 'Manual Input',
-                        'file_type': doc.file_type,
-                        'paragraph_index': doc.paragraph_index,
-                        'similarity': round(result['similarity'], 4)
-                    })
+            if doc:
+                response.append({
+                    'id': doc.get('id'),
+                    'title': doc.get('title') or 'Untitled',
+                    'text': doc.get('chunk_text') or doc.get('text'),
+                    'source': doc.get('source_file') or 'Manual Input',
+                    'file_type': doc.get('file_type'),
+                    'paragraph_index': doc.get('paragraph_index', 0),
+                    'similarity': round(result['similarity'], 4)
+                })
 
-            logger.info(f"Search query: '{query}', found {len(response)} results")
+        logger.info(f"Search query: '{query}', found {len(response)} results")
 
-            return jsonify({
-                'query': query,
-                'count': len(response),
-                'results': response
-            })
-
-        finally:
-            session.close()
+        return jsonify({
+            'query': query,
+            'count': len(response),
+            'results': response
+        })
 
     except Exception as e:
         logger.error(f"Search error: {e}")

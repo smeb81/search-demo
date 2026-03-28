@@ -14,7 +14,7 @@ import os
 import logging
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import FAISS_INDEX_PATH, DOC_IDS_PATH, DEFAULT_TOP_K
+from config import FAISS_INDEX_PATH, DOC_IDS_PATH, DEFAULT_TOP_K, SIMILARITY_THRESHOLD
 from services.embedding import get_embedding_service
 
 # 配置日志
@@ -77,12 +77,12 @@ class SearchService:
         except Exception as e:
             logger.error(f"Error saving index: {e}")
 
-    def add_document(self, doc_id: int, text: str, batch_mode: bool = False):
+    def add_document(self, doc_id: str, text: str, batch_mode: bool = False):
         """
         添加文档到索引
 
         Args:
-            doc_id: 文档ID
+            doc_id: 文档ID (MongoDB ObjectId 字符串)
             text: 文档文本（或段落列表）
             batch_mode: 是否批量添加段落
         """
@@ -93,7 +93,7 @@ class SearchService:
             # 添加单个文档/段落
             self._add_single_embedding(doc_id, text)
 
-    def _add_single_embedding(self, doc_id: int, text: str):
+    def _add_single_embedding(self, doc_id: str, text: str):
         """添加单个向量"""
         try:
             embedding = self._embedding_service.encode(text)
@@ -107,7 +107,7 @@ class SearchService:
         except Exception as e:
             logger.error(f"Error adding document {doc_id}: {e}")
 
-    def _add_paragraphs(self, doc_id: int, paragraphs: list):
+    def _add_paragraphs(self, doc_id: str, paragraphs: list):
         """批量添加段落向量"""
         if not paragraphs:
             return
@@ -166,25 +166,28 @@ class SearchService:
         except Exception as e:
             logger.error(f"Error in batch add: {e}")
 
-    def delete_document(self, doc_id: int):
+    def delete_document(self, doc_id: str):
         """
         删除文档（通过重建索引）
 
         Args:
-            doc_id: 文档ID
+            doc_id: 文档ID (MongoDB ObjectId 字符串)
         """
         # 检查文档是否在索引中
-        if doc_id not in [x if isinstance(x, int) else x[0] for x in self.doc_ids]:
+        doc_ids_in_index = [x if isinstance(x, str) else x[0] for x in self.doc_ids]
+        if doc_id not in doc_ids_in_index:
             logger.warning(f"Document {doc_id} not in index")
             return
 
         # 重新构建索引
-        from models.document import get_session, Document
+        from models.document_mongo import get_all_mongo_docs
 
-        session = get_session()
         try:
             # 获取所有其他文档
-            all_docs = session.query(Document).filter(Document.id != doc_id).all()
+            all_docs = get_all_mongo_docs()
+
+            # 过滤掉要删除的文档
+            all_docs = [doc for doc in all_docs if doc.get('id') != doc_id]
 
             # 重建索引
             dim = self._embedding_service.get_embedding_dim()
@@ -192,23 +195,32 @@ class SearchService:
             self.doc_ids = []
 
             for doc in all_docs:
-                text = doc.chunk_text or doc.text
-                self._add_single_embedding(doc.id, text)
+                text = doc.get('chunk_text') or doc.get('text')
+                doc_id_str = doc.get('id')
+                para_idx = doc.get('paragraph_index', 0)
+                if text and doc_id_str:
+                    embedding = self._embedding_service.encode(text)
+                    embedding = embedding / np.linalg.norm(embedding)
+                    self.index.add(embedding)
+                    self.doc_ids.append((doc_id_str, para_idx))
 
+            self.save_index()
             logger.info(f"Deleted document {doc_id} from index")
-        finally:
-            session.close()
+        except Exception as e:
+            logger.error(f"Error deleting document {doc_id}: {e}")
 
-    def search(self, query: str, top_k: int = DEFAULT_TOP_K) -> list:
+    def search(self, query: str, top_k: int = DEFAULT_TOP_K, threshold: float = SIMILARITY_THRESHOLD) -> list:
         """
         语义搜索
 
         Args:
             query: 查询文本
             top_k: 返回结果数量
+            threshold: 相似度阈值，低于此值的结果将被过滤
 
         Returns:
             搜索结果列表，每项包含 doc_id, paragraph_index, similarity
+            注意：同一文档只返回相似度最高的段落
         """
         if self.index.ntotal == 0:
             logger.warning("Index is empty")
@@ -219,14 +231,14 @@ class SearchService:
             query_embedding = self._embedding_service.encode(query)
             query_embedding = query_embedding / np.linalg.norm(query_embedding)
 
-            # 搜索
-            k = min(top_k, self.index.ntotal)
+            # 搜索（多搜索一些结果，以便过滤后仍有足够结果）
+            k = min(top_k * 5, self.index.ntotal)  # 多搜索一些以备去重和过滤
             distances, indices = self.index.search(query_embedding, k)
 
-            # 构建结果
-            results = []
+            # 先收集所有满足阈值条件的结果
+            all_results = []
             for dist, idx in zip(distances[0], indices[0]):
-                if idx >= 0 and idx < len(self.doc_ids):
+                if idx >= 0 and idx < len(self.doc_ids) and dist >= threshold:
                     doc_id_or_tuple = self.doc_ids[idx]
 
                     # 处理单个ID或(文档ID, 段落索引)元组
@@ -236,13 +248,23 @@ class SearchService:
                         doc_id = doc_id_or_tuple
                         para_idx = None
 
-                    results.append({
+                    all_results.append({
                         'doc_id': doc_id,
                         'paragraph_index': para_idx,
                         'similarity': float(dist)
                     })
 
-            logger.info(f"Search completed, found {len(results)} results")
+            # 去重：对同一文档只保留相似度最高的段落
+            doc_best = {}  # doc_id -> best result
+            for result in all_results:
+                doc_id = result['doc_id']
+                if doc_id not in doc_best or result['similarity'] > doc_best[doc_id]['similarity']:
+                    doc_best[doc_id] = result
+
+            # 按相似度降序排序，取 top_k 个
+            results = sorted(doc_best.values(), key=lambda x: x['similarity'], reverse=True)[:top_k]
+
+            logger.info(f"Search completed with threshold {threshold}, found {len(results)} unique results from {len(all_results)} total")
             return results
 
         except Exception as e:
@@ -258,15 +280,14 @@ class SearchService:
         }
 
     def rebuild_index(self):
-        """重建整个索引"""
-        logger.info("Rebuilding index...")
+        """重建整个索引（索引所有段落）"""
+        logger.info("Rebuilding index with all paragraphs...")
 
-        from models.document import get_session, Document
+        from models.document_mongo import get_all_mongo_docs
 
-        session = get_session()
         try:
-            # 获取所有文档
-            all_docs = session.query(Document).all()
+            # 获取所有文档段落
+            all_docs = get_all_mongo_docs()
 
             # 重建索引
             dim = self._embedding_service.get_embedding_dim()
@@ -274,12 +295,22 @@ class SearchService:
             self.doc_ids = []
 
             for doc in all_docs:
-                text = doc.chunk_text or doc.text
-                self._add_single_embedding(doc.id, text)
+                text = doc.get('chunk_text') or doc.get('text')
+                doc_id = doc.get('id')
+                para_idx = doc.get('paragraph_index', 0)
+                title = doc.get('title', '')
+                if text and doc_id:
+                    embedding = self._embedding_service.encode(text)
+                    embedding = embedding / np.linalg.norm(embedding)
+                    self.index.add(embedding)
+                    # 存储 (doc_id, paragraph_index) 元组
+                    self.doc_ids.append((doc_id, para_idx))
+                    logger.info(f"Added doc {doc_id} paragraph {para_idx}: {title[:30]}")
 
-            logger.info(f"Index rebuilt with {len(all_docs)} documents")
-        finally:
-            session.close()
+            self.save_index()
+            logger.info(f"Index rebuilt with {len(all_docs)} documents, total vectors: {self.index.ntotal}")
+        except Exception as e:
+            logger.error(f"Error rebuilding index: {e}")
 
 
 # 全局实例

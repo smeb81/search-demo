@@ -1,0 +1,498 @@
+{
+  "indicators": [
+    {
+      "name": "空腹血糖",
+      "aliases": ["空腹血糖", "空腹血清葡萄糖", "GLU", "FPG"],
+      "min": 3.9,
+      "max": 6.1,
+      "unit": "mmol/L",
+      "category": "血糖"
+    },
+    {
+      "name": "餐后2小时血糖",
+      "aliases": ["餐后2小时血糖", "餐后血糖", "2hPG"],
+      "min": 3.9,
+      "max": 7.8,
+      "unit": "mmol/L",
+      "category": "血糖"
+    },
+    {
+      "name": "糖化血红蛋白",
+      "aliases": ["糖化血红蛋白", "HbA1c", "GHb"],
+      "min": 4.0,
+      "max": 6.0,
+      "unit": "%",
+      "category": "血糖"
+    },
+    {
+      "name": "随机血糖",
+      "aliases": ["随机血糖", "随机血清葡萄糖"],
+      "min": 0,
+      "max": 11.1,
+      "unit": "mmol/L",
+      "category": "血糖"
+    },
+    {
+      "name": "收缩压",
+      "aliases": ["收缩压", "高压", "SBP", " systolic pressure"],
+      "min": 90,
+      "max": 140,
+      "unit": "mmHg",
+      "category": "血压"
+    },
+    {
+      "name": "舒张压",
+      "aliases": ["舒张压", "低压", "DBP", "diastolic pressure"],
+      "min": 60,
+      "max": 90,
+      "unit": "mmHg",
+      "category": "血压"
+    },
+    {
+      "name": "脉搏",
+      "aliases": ["脉搏", "心率", "HR", "P"],
+      "min": 60,
+      "max": 100,
+      "unit": "次/分",
+      "category": "血压"
+    },
+    {
+      "name": "总胆固醇",
+      "aliases": ["总胆固醇", "TC", "CHOL"],
+      "min": 2.9,
+      "max": 5.17,
+      "unit": "mmol/L",
+      "category": "血脂"
+    },
+    {
+      "name": "甘油三酯",
+      "aliases": ["甘油三酯", "TG", "TRIG"],
+      "min": 0.4,
+      "max": 1.7,
+      "unit": "mmol/L",
+      "category": "血脂"
+    },
+    {
+      "name": "高密度脂蛋白胆固醇",
+      "aliases": ["高密度脂蛋白", "HDL-C", "HDL", "高密度脂蛋白胆固醇"],
+      "min": 1.03,
+      "max": 1.55,
+      "unit": "mmol/L",
+      "category": "血脂"
+    },
+    {
+      "name": "低密度脂蛋白胆固醇",
+      "aliases": ["低密度脂蛋白", "LDL-C", "LDL", "低密度脂蛋白胆固醇"],
+      "min": 0,
+      "max": 3.37,
+      "unit": "mmol/L",
+      "category": "血脂"
+    },
+    {
+      "name": "极低密度脂蛋白",
+      "aliases": ["极低密度脂蛋白", "VLDL"],
+      "min": 0.1,
+      "max": 0.78,
+      "unit": "mmol/L",
+      "category": "血脂"
+    },
+    {
+      "name": "载脂蛋白A1",
+      "aliases": ["载脂蛋白A1", "ApoA1"],
+      "min": 1.0,
+      "max": 1.6,
+      "unit": "g/L",
+      "category": "血脂"
+    },
+    {
+      "name": "载脂蛋白B",
+      "aliases": ["载脂蛋白B", "ApoB"],
+      "min": 0.6,
+      "max": 1.1,
+      "unit": "g/L",
+      "category": "血脂"
+    },
+    {
+      "name": "丙氨酸氨基转移酶",
+      "aliases": ["丙氨酸氨基转移酶", "ALT", "谷丙转氨酶", "GPT"],
+      "min": 9,
+      "max": 50,
+      "unit": "U/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "天门冬氨酸氨基转移酶",
+      "aliases": ["天门冬氨酸氨基转移酶", "AST", "谷草转氨酶", "GOT"],
+      "min": 15,
+      "max": 40,
+      "unit": "U/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "γ-谷氨酰转肽酶",
+      "aliases": ["γ-谷氨酰转肽酶", "GGT", "谷氨酰转肽酶"],
+      "min": 10,
+      "max": 60,
+      "unit": "U/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "碱性磷酸酶",
+      "aliases": ["碱性磷酸酶", "ALP", "AKP"],
+      "min": 45,
+      "max": 125,
+      "unit": "U/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "总胆红素",
+      "aliases": ["总胆红素", "TBIL", "TB"],
+      "min": 3.4,
+      "max": 17.1,
+      "unit": "μmol/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "直接胆红素",
+      "aliases": ["直接胆红素", "DBIL", "DB"],
+      "min": 0,
+      "max": 6.8,
+      "unit": "μmol/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "间接胆红素",
+      "aliases": ["间接胆红素", "IBIL"],
+      "min": 1.7,
+      "max": 10.2,
+      "unit": "μmol/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "总蛋白",
+      "aliases": ["总蛋白", "TP"],
+      "min": 60,
+      "max": 82,
+      "unit": "g/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "白蛋白",
+      "aliases": ["白蛋白", "ALB"],
+      "min": 35,
+      "max": 52,
+      "unit": "g/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "球蛋白",
+      "aliases": ["球蛋白", "GLB"],
+      "min": 20,
+      "max": 40,
+      "unit": "g/L",
+      "category": "肝功能"
+    },
+    {
+      "name": "白球比",
+      "aliases": ["白球比", "A/G", "白蛋白/球蛋白比值"],
+      "min": 1.2,
+      "max": 2.4,
+      "unit": "",
+      "category": "肝功能"
+    },
+    {
+      "name": "肌酐",
+      "aliases": ["肌酐", "Cr", "CREA"],
+      "min": 44,
+      "max": 97,
+      "unit": "μmol/L",
+      "category": "肾功能"
+    },
+    {
+      "name": "尿素氮",
+      "aliases": ["尿素氮", "BUN", "UREA"],
+      "min": 2.6,
+      "max": 7.5,
+      "unit": "mmol/L",
+      "category": "肾功能"
+    },
+    {
+      "name": "尿酸",
+      "aliases": ["尿酸", "UA", "uric acid"],
+      "min": 208,
+      "max": 428,
+      "unit": "μmol/L",
+      "category": "肾功能"
+    },
+    {
+      "name": "估算肾小球滤过率",
+      "aliases": ["估算肾小球滤过率", "eGFR"],
+      "min": 90,
+      "max": 999,
+      "unit": "mL/min/1.73m²",
+      "category": "肾功能"
+    },
+    {
+      "name": "白细胞计数",
+      "aliases": ["白细胞", "WBC", " Leukocyte", "白细胞计数"],
+      "min": 3.5,
+      "max": 9.5,
+      "unit": "×10⁹/L",
+      "category": "血常规"
+    },
+    {
+      "name": "红细胞计数",
+      "aliases": ["红细胞", "RBC", " Erythrocyte", "红细胞计数"],
+      "min": 4.3,
+      "max": 5.8,
+      "unit": "×10¹²/L",
+      "category": "血常规"
+    },
+    {
+      "name": "血红蛋白",
+      "aliases": ["血红蛋白", "HGB", "Hb"],
+      "min": 130,
+      "max": 175,
+      "unit": "g/L",
+      "category": "血常规"
+    },
+    {
+      "name": "红细胞压积",
+      "aliases": ["红细胞压积", "HCT", "PCV", "血细胞比容"],
+      "min": 40,
+      "max": 50,
+      "unit": "%",
+      "category": "血常规"
+    },
+    {
+      "name": "平均红细胞体积",
+      "aliases": ["平均红细胞体积", "MCV"],
+      "min": 82,
+      "max": 100,
+      "unit": "fL",
+      "category": "血常规"
+    },
+    {
+      "name": "平均红细胞血红蛋白量",
+      "aliases": ["平均红细胞血红蛋白量", "MCH"],
+      "min": 27,
+      "max": 34,
+      "unit": "pg",
+      "category": "血常规"
+    },
+    {
+      "name": "平均红细胞血红蛋白浓度",
+      "aliases": ["平均红细胞血红蛋白浓度", "MCHC"],
+      "min": 316,
+      "max": 354,
+      "unit": "g/L",
+      "category": "血常规"
+    },
+    {
+      "name": "血小板计数",
+      "aliases": ["血小板", "PLT", "Thrombocyte", "血小板计数"],
+      "min": 125,
+      "max": 350,
+      "unit": "×10⁹/L",
+      "category": "血常规"
+    },
+    {
+      "name": "中性粒细胞绝对值",
+      "aliases": ["中性粒细胞绝对值", "NEUT#", "NEUT"],
+      "min": 1.8,
+      "max": 6.3,
+      "unit": "×10⁹/L",
+      "category": "血常规"
+    },
+    {
+      "name": "淋巴细胞绝对值",
+      "aliases": ["淋巴细胞绝对值", "LYMPH#", "LYMPH"],
+      "min": 1.1,
+      "max": 3.2,
+      "unit": "×10⁹/L",
+      "category": "血常规"
+    },
+    {
+      "name": "单核细胞绝对值",
+      "aliases": ["单核细胞绝对值", "MONO#", "MONO"],
+      "min": 0.1,
+      "max": 0.6,
+      "unit": "×10⁹/L",
+      "category": "血常规"
+    },
+    {
+      "name": "嗜酸性粒细胞绝对值",
+      "aliases": ["嗜酸性粒细胞绝对值", "EO#", "EOS"],
+      "min": 0.02,
+      "max": 0.52,
+      "unit": "×10⁹/L",
+      "category": "血常规"
+    },
+    {
+      "name": "嗜碱性粒细胞绝对值",
+      "aliases": ["嗜碱性粒细胞绝对值", "BASO#", "BASO"],
+      "min": 0,
+      "max": 0.06,
+      "unit": "×10⁹/L",
+      "category": "血常规"
+    },
+    {
+      "name": "尿蛋白",
+      "aliases": ["尿蛋白", "PRO", "protein"],
+      "min": 0,
+      "max": 0,
+      "unit": "",
+      "category": "尿常规",
+      "negativeNormal": true
+    },
+    {
+      "name": "尿糖",
+      "aliases": ["尿糖", "GLU", "glucose"],
+      "min": 0,
+      "max": 0,
+      "unit": "",
+      "category": "尿常规",
+      "negativeNormal": true
+    },
+    {
+      "name": "尿潜血",
+      "aliases": ["尿潜血", "BLD", "BLood"],
+      "min": 0,
+      "max": 0,
+      "unit": "",
+      "category": "尿常规",
+      "negativeNormal": true
+    },
+    {
+      "name": "尿胆红素",
+      "aliases": ["尿胆红素", "BIL"],
+      "min": 0,
+      "max": 0,
+      "unit": "",
+      "category": "尿常规",
+      "negativeNormal": true
+    },
+    {
+      "name": "尿酮体",
+      "aliases": ["尿酮体", "KET"],
+      "min": 0,
+      "max": 0,
+      "unit": "",
+      "category": "尿常规",
+      "negativeNormal": true
+    },
+    {
+      "name": "尿白细胞",
+      "aliases": ["尿白细胞", "LEU", "WBC"],
+      "min": 0,
+      "max": 0,
+      "unit": "",
+      "category": "尿常规",
+      "negativeNormal": true
+    },
+    {
+      "name": "尿比重",
+      "aliases": ["尿比重", "SG"],
+      "min": 1.003,
+      "max": 1.030,
+      "unit": "",
+      "category": "尿常规"
+    },
+    {
+      "name": "尿pH值",
+      "aliases": ["尿pH值", "pH"],
+      "min": 4.6,
+      "max": 8.0,
+      "unit": "",
+      "category": "尿常规"
+    },
+    {
+      "name": "空腹胰岛素",
+      "aliases": ["空腹胰岛素", "FINS"],
+      "min": 2.6,
+      "max": 24.9,
+      "unit": "μIU/mL",
+      "category": "内分泌"
+    },
+    {
+      "name": "C肽",
+      "aliases": ["C肽", "C-Peptide"],
+      "min": 0.8,
+      "max": 4.2,
+      "unit": "ng/mL",
+      "category": "内分泌"
+    },
+    {
+      "name": "促甲状腺激素",
+      "aliases": ["促甲状腺激素", "TSH"],
+      "min": 0.27,
+      "max": 4.2,
+      "unit": "mIU/L",
+      "category": "内分泌"
+    },
+    {
+      "name": "游离三碘甲状腺原氨酸",
+      "aliases": ["游离三碘甲状腺原氨酸", "FT3"],
+      "min": 3.1,
+      "max": 6.8,
+      "unit": "pmol/L",
+      "category": "内分泌"
+    },
+    {
+      "name": "游离甲状腺素",
+      "aliases": ["游离甲状腺素", "FT4"],
+      "min": 12,
+      "max": 22,
+      "unit": "pmol/L",
+      "category": "内分泌"
+    },
+    {
+      "name": "三碘甲状腺原氨酸",
+      "aliases": ["三碘甲状腺原氨酸", "T3"],
+      "min": 1.3,
+      "max": 3.1,
+      "unit": "nmol/L",
+      "category": "内分泌"
+    },
+    {
+      "name": "甲状腺素",
+      "aliases": ["甲状腺素", "T4"],
+      "min": 66,
+      "max": 181,
+      "unit": "nmol/L",
+      "category": "内分泌"
+    },
+    {
+      "name": "三酰甘油",
+      "aliases": ["三酰甘油", "同甘油三酯"],
+      "min": 0.4,
+      "max": 1.7,
+      "unit": "mmol/L",
+      "category": "血脂"
+    },
+    {
+      "name": "同型半胱氨酸",
+      "aliases": ["同型半胱氨酸", "Hcy", "HCY"],
+      "min": 0,
+      "max": 15,
+      "unit": "μmol/L",
+      "category": "心血管"
+    },
+    {
+      "name": "超敏C反应蛋白",
+      "aliases": ["超敏C反应蛋白", "hs-CRP", "hsCRP"],
+      "min": 0,
+      "max": 3,
+      "unit": "mg/L",
+      "category": "炎症"
+    },
+    {
+      "name": "C反应蛋白",
+      "aliases": ["C反应蛋白", "CRP"],
+      "min": 0,
+      "max": 8,
+      "unit": "mg/L",
+      "category": "炎症"
+    }
+  ]
+}

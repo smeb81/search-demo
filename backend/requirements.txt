@@ -4,6 +4,7 @@ flask-cors>=4.0.0
 
 # 数据库
 SQLAlchemy>=2.0.0
+pymongo>=4.6.0
 
 # 向量数据库
 faiss-cpu>=1.7.4
