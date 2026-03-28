@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: medical-report-parser
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+  ai:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:your-api-key-here}
+      base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+      options:
+        model: ${ANTHROPIC_MODEL:claude-sonnet-4-6}
+
+server:
+  port: ${SERVER_PORT:8081}
+  address: 0.0.0.0
+
+# 本地存储路径
+storage:
+  data-dir: ./data

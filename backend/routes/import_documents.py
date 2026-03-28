@@ -1,5 +1,5 @@
 """
-文档导入路由
+文档导入路由 (MongoDB版本)
 支持：
 - 文件夹批量导入
 - PDF/DOCX/TXT 多格式解析
@@ -9,10 +9,10 @@
 """
 
 from flask import Blueprint, request, jsonify
-from models.document import get_session, Document, create_document, delete_paragraphs_by_source
+from models.document_mongo import create_document, delete_paragraphs_by_source
 from services.search import search_service
 from utils.file_reader import read_files_from_folder, read_file, get_supported_formats, read_file_content
-from utils.text_preprocessor import preprocess_text, batch_preprocess_texts
+from utils.text_preprocessor import preprocess_text
 from utils.text_splitter import split_text_with_metadata
 import logging
 import os
@@ -89,7 +89,6 @@ def import_documents():
             # 获取文件类型
             file_type = None
             if doc_data['source']:
-                import os
                 ext = os.path.splitext(doc_data['source'])[1].lower()
                 if ext:
                     file_type = ext[1:]  # 去掉点号
@@ -115,8 +114,8 @@ def import_documents():
 
                 # 为每个段落添加向量索引
                 for doc in created_docs:
-                    if doc.chunk_text:
-                        search_service.add_document(doc.id, doc.chunk_text)
+                    if doc.get('chunk_text'):
+                        search_service.add_document(doc['id'], doc['chunk_text'])
 
             else:
                 # 不分割，整个文档作为一条记录
@@ -128,7 +127,7 @@ def import_documents():
                 )
 
                 # 添加到搜索索引
-                search_service.add_document(doc.id, text)
+                search_service.add_document(doc['id'], text)
 
             imported_count += 1
             logger.info(f"Imported: {doc_data['title']}")
@@ -186,7 +185,6 @@ def import_single_file():
             text = doc_data['text']
 
         # 获取文件类型
-        import os
         ext = os.path.splitext(file_path)[1].lower()
         file_type = ext[1:] if ext else None
 
@@ -199,6 +197,7 @@ def import_single_file():
             logger.info(f"Replacing {existing_count} existing paragraphs")
 
         paragraph_count = 0
+        doc = None
 
         if split_paragraphs:
             # 分割为段落
@@ -224,11 +223,12 @@ def import_single_file():
             )
 
         # 添加到搜索索引
-        search_service.add_document(doc.id if 'doc' in locals() else 0, text)
+        if doc:
+            search_service.add_document(doc['id'], text)
 
         return jsonify({
             'message': 'File imported successfully',
-            'document': doc.to_dict() if 'doc' in locals() else None,
+            'document': doc,
             'paragraphs': paragraph_count
         }), 201
 
@@ -330,8 +330,8 @@ def upload_file():
 
                 # 为每个段落添加向量索引
                 for created_doc in created_docs:
-                    if created_doc.chunk_text:
-                        search_service.add_document(created_doc.id, created_doc.chunk_text)
+                    if created_doc.get('chunk_text'):
+                        search_service.add_document(created_doc['id'], created_doc['chunk_text'])
 
                 # 返回第一个文档
                 doc = created_docs[0] if created_docs else None
@@ -346,11 +346,11 @@ def upload_file():
 
                 # 添加到搜索索引
                 if doc:
-                    search_service.add_document(doc.id, text)
+                    search_service.add_document(doc['id'], text)
 
             return jsonify({
                 'message': 'File uploaded successfully',
-                'document': doc.to_dict() if doc else None,
+                'document': doc,
                 'paragraphs': paragraph_count,
                 'existing_paragraphs_replaced': existing_count
             }), 201

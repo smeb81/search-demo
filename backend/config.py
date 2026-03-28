@@ -7,6 +7,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.path.join(BASE_DIR, 'documents.db')
 REBUILD_DATABASE = True  # 设为 True 自动重建数据库（首次运行后改为 False）
 
+# MongoDB配置
+MONGODB_URI = 'mongodb://localhost:27017/'
+MONGODB_DATABASE = 'document_search'
+MONGODB_COLLECTION = 'documents'
+
 # FAISS索引文件路径
 FAISS_INDEX_PATH = os.path.join(BASE_DIR, 'faiss_index.bin')
 DOC_IDS_PATH = os.path.join(BASE_DIR, 'doc_ids.pkl')
